@@ -1,30 +1,61 @@
+// FULL UPGRADE WITH TOOLTIP AND INTERACTIVITY
+
+// 🧱 Core Imports and Setup
+import * as THREE from 'three';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+
+// 🌌 Scene Initialization
 const scene = new THREE.Scene();
 scene.fog = new THREE.Fog(0x000000, 10, 120);
 
+// 🎥 Camera Setup
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-camera.position.z = 45;
+camera.position.z = 60;
 
+// 🖥️ Renderer Configuration
 const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('visualizer'), antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setClearColor(0x000000, 1);
+document.body.appendChild(renderer.domElement);
 
-// Torus Knot (core hub)
+// 🕹️ Orbit Controls
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.1;
+controls.zoomSpeed = 0.6;
+
+// 🏷️ Tooltip Label
+const tooltip = document.createElement('div');
+tooltip.style.position = 'absolute';
+tooltip.style.color = '#fff';
+tooltip.style.background = 'rgba(0,0,0,0.6)';
+tooltip.style.padding = '4px 8px';
+tooltip.style.fontSize = '12px';
+tooltip.style.borderRadius = '4px';
+tooltip.style.pointerEvents = 'none';
+tooltip.style.display = 'none';
+tooltip.style.zIndex = '10';
+document.body.appendChild(tooltip);
+
+// 🌀 Central Torus Core
 const coreGeometry = new THREE.TorusKnotGeometry(3, 1, 80, 8);
 const coreMaterial = new THREE.MeshBasicMaterial({ color: 0x00ffcc, wireframe: true });
 const core = new THREE.Mesh(coreGeometry, coreMaterial);
 scene.add(core);
 
-// Node categories
+// 🔠 Node Definitions (AI, Human, Sensor)
 const nodeTypes = [
-    { label: "AI", baseHue: 300, floatSpeed: 0.01, pulseSpeed: 2.5 },
-    { label: "Human", baseHue: 180, floatSpeed: 0.008, pulseSpeed: 3.2 },
-    { label: "Sensor", baseHue: 60, floatSpeed: 0.006, pulseSpeed: 4.1 }
+    { label: "AI", baseHue: 300, floatSpeed: 0.01, pulseSpeed: 2.5, behavior: "spin" },
+    { label: "Human", baseHue: 180, floatSpeed: 0.008, pulseSpeed: 3.2, behavior: "shimmer" },
+    { label: "Sensor", baseHue: 60, floatSpeed: 0.006, pulseSpeed: 4.1, behavior: "blink" }
 ];
 
-const nodes = [];
-const ghostClones = [];
-const nodeCount = 20;
+// 🌐 Node Initialization
+const nodes = [], nodeCount = 20;
 const nodeGeometry = new THREE.IcosahedronGeometry(0.6, 0);
+const raycaster = new THREE.Raycaster();
+const pointer = new THREE.Vector2();
+let hoveredNode = null;
 
 for (let i = 0; i < nodeCount; i++) {
     const type = nodeTypes[i % nodeTypes.length];
@@ -38,7 +69,6 @@ for (let i = 0; i < nodeCount; i++) {
         transparent: true,
         opacity: 0.85
     });
-
     const glow = new THREE.Mesh(nodeGeometry.clone(), glowMat);
     glow.scale.set(1.4, 1.4, 1.4);
 
@@ -51,7 +81,7 @@ for (let i = 0; i < nodeCount; i++) {
         baseHue: type.baseHue,
         floatSpeed: type.floatSpeed,
         pulseSpeed: type.pulseSpeed,
-        baseScale: 1,
+        behavior: type.behavior,
         tOffset: Math.random() * 10
     };
 
@@ -65,7 +95,7 @@ for (let i = 0; i < nodeCount; i++) {
     nodes.push(group);
 }
 
-// Connections with dynamic geometry
+// 🔗 Connections Between Nodes
 const connections = [];
 const lineMaterial = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.08 });
 
@@ -82,88 +112,49 @@ for (let i = 0; i < nodeCount; i++) {
     }
 }
 
-// Background animation
-let bgShift = 0;
-const styleEl = document.createElement('style');
-styleEl.innerHTML = `
-  body, html {
-    background: radial-gradient(circle at center, #0d001c, #000000);
-    animation: bgFlow 12s ease-in-out infinite alternate;
-  }
-  @keyframes bgFlow {
-    0% { background-position: 50% 50%; filter: hue-rotate(0deg); }
-    100% { background-position: 51% 49%; filter: hue-rotate(360deg); }
-  }
-`;
-document.head.appendChild(styleEl);
-
-// Animation loop
+// ⏱️ Animation Loop
 const clock = new THREE.Clock();
 
 function animate() {
     requestAnimationFrame(animate);
     const t = clock.getElapsedTime();
+    controls.update();
 
- // Sacred torus rotation with psychedelic rhythm
-core.rotation.x = 0.2 * Math.sin(t * 0.7);
-core.rotation.y = 0.3 * Math.cos(t * 0.5);
-core.rotation.z = 0.15 * Math.sin(t * 1.2 + Math.PI / 4);
+    // 🎡 Core Torus Motion
+    core.rotation.x = 0.2 * Math.sin(t * 0.7);
+    core.rotation.y = 0.3 * Math.cos(t * 0.5);
+    core.rotation.z = 0.15 * Math.sin(t * 1.2 + Math.PI / 4);
 
-    // Update each node
+    // 🔁 Node Orbits + Visuals
     nodes.forEach((group, index) => {
-        const { floatSpeed, pulseSpeed, baseHue, tOffset } = group.userData;
+        const { floatSpeed, pulseSpeed, baseHue, behavior, tOffset } = group.userData;
 
-        // Pulse scale
+        const baseRadius = 20;
+        const modRadius = baseRadius + 5 * Math.sin(t * 0.5 + tOffset);
+        const a = t * floatSpeed + tOffset;
+        const b = t * floatSpeed * 1.5 + tOffset;
+
+        group.position.x = modRadius * Math.sin(a) * Math.cos(b);
+        group.position.y = modRadius * Math.sin(a) * Math.sin(b);
+        group.position.z = modRadius * Math.cos(a);
+
         const pulse = 1 + 0.15 * Math.sin(t * pulseSpeed + tOffset);
         group.scale.set(pulse, pulse, pulse);
 
-// Sacred geometry-inspired orbital motion around the torus core
-const baseRadius = 20;
-const modRadius = baseRadius + 5 * Math.sin(t * 0.5 + tOffset);
-const a = t * floatSpeed + tOffset;
-const b = t * floatSpeed * 1.5 + tOffset;
-
-group.position.x = modRadius * Math.sin(a) * Math.cos(b);
-group.position.y = modRadius * Math.sin(a) * Math.sin(b);
-group.position.z = modRadius * Math.cos(a);
-
-
-        // Animate glow color (psychedelic hue shift)
         const hue = (baseHue + t * 60 + index * 5) % 360;
         group.children[1].material.color.setHSL(hue / 360, 1, 0.6);
 
-        // Ghost trails
-        if (Math.random() < 0.015) {
-            const ghost = group.clone();
-            ghost.traverse(child => {
-                if (child.material) {
-                    child.material = child.material.clone();
-                    child.material.opacity = 0.15;
-                    child.material.transparent = true;
-                }
-            });
-            ghost.position.copy(group.position);
-            ghost.scale.copy(group.scale);
-            ghost.userData.life = 1.0;
-            scene.add(ghost);
-            ghostClones.push(ghost);
+        // 🧠 Node Type Behavior
+        if (behavior === "spin") {
+            group.rotation.y += 0.01;
+        } else if (behavior === "shimmer") {
+            group.children[1].material.opacity = 0.7 + 0.2 * Math.sin(t * 4 + tOffset);
+        } else if (behavior === "blink") {
+            group.visible = Math.sin(t * 3 + tOffset) > 0;
         }
     });
 
-    // Fade ghost trails
-    for (let i = ghostClones.length - 1; i >= 0; i--) {
-        const ghost = ghostClones[i];
-        ghost.userData.life -= 0.015;
-        ghost.traverse(child => {
-            if (child.material) child.material.opacity *= 0.95;
-        });
-        if (ghost.userData.life <= 0) {
-            scene.remove(ghost);
-            ghostClones.splice(i, 1);
-        }
-    }
-
-    // Update connection lines with subtle pulsation
+    // 📡 Data Pulses on Connections
     connections.forEach(conn => {
         const p1 = nodes[conn.i].position;
         const p2 = nodes[conn.j].position;
@@ -179,14 +170,35 @@ group.position.z = modRadius * Math.cos(a);
         conn.line.geometry.attributes.position.needsUpdate = true;
     });
 
+    // 🏷️ Tooltip Label on Hover
+    raycaster.setFromCamera(pointer, camera);
+    const intersects = raycaster.intersectObjects(nodes.map(n => n.children[0]));
+    if (intersects.length > 0) {
+        const node = intersects[0].object.parent;
+        const { type } = node.userData;
+        tooltip.innerText = `Node Type: ${type}`;
+        tooltip.style.left = `${event.clientX + 10}px`;
+        tooltip.style.top = `${event.clientY - 10}px`;
+        tooltip.style.display = 'block';
+    } else {
+        tooltip.style.display = 'none';
+    }
+
     renderer.render(scene, camera);
 }
 
 animate();
 
+// 🔁 Responsive Canvas Resize
 window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// 🖱️ Pointer Tracking
+document.addEventListener('pointermove', event => {
+    pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
+    pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
 });
 
