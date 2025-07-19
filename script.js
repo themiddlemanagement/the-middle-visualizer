@@ -8,23 +8,22 @@ const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('visu
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setClearColor(0x000000, 1);
 
-// Core data knot
+// Torus Knot (core hub)
 const coreGeometry = new THREE.TorusKnotGeometry(3, 1, 80, 8);
 const coreMaterial = new THREE.MeshBasicMaterial({ color: 0x00ffcc, wireframe: true });
 const core = new THREE.Mesh(coreGeometry, coreMaterial);
 scene.add(core);
 
-// Node types
+// Node categories
 const nodeTypes = [
-    { label: "AI", color: 0xff0044, floatSpeed: 0.01, pulseSpeed: 2.5 },
-    { label: "Human", color: 0x00ffff, floatSpeed: 0.008, pulseSpeed: 3.2 },
-    { label: "Sensor", color: 0xffff00, floatSpeed: 0.006, pulseSpeed: 4.1 }
+    { label: "AI", baseHue: 300, floatSpeed: 0.01, pulseSpeed: 2.5 },
+    { label: "Human", baseHue: 180, floatSpeed: 0.008, pulseSpeed: 3.2 },
+    { label: "Sensor", baseHue: 60, floatSpeed: 0.006, pulseSpeed: 4.1 }
 ];
 
 const nodes = [];
-const nodeCount = 20;
 const ghostClones = [];
-
+const nodeCount = 20;
 const nodeGeometry = new THREE.IcosahedronGeometry(0.6, 0);
 
 for (let i = 0; i < nodeCount; i++) {
@@ -34,11 +33,12 @@ for (let i = 0; i < nodeCount; i++) {
     const core = new THREE.Mesh(nodeGeometry, coreMat);
 
     const glowMat = new THREE.MeshBasicMaterial({
-        color: type.color,
+        color: new THREE.Color(`hsl(${type.baseHue}, 100%, 60%)`),
         wireframe: true,
         transparent: true,
         opacity: 0.85
     });
+
     const glow = new THREE.Mesh(nodeGeometry.clone(), glowMat);
     glow.scale.set(1.4, 1.4, 1.4);
 
@@ -48,6 +48,7 @@ for (let i = 0; i < nodeCount; i++) {
 
     group.userData = {
         type: type.label,
+        baseHue: type.baseHue,
         floatSpeed: type.floatSpeed,
         pulseSpeed: type.pulseSpeed,
         baseScale: 1,
@@ -64,54 +65,72 @@ for (let i = 0; i < nodeCount; i++) {
     nodes.push(group);
 }
 
-// Light connections
+// Connections with dynamic geometry
 const connections = [];
-const lineMaterial = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.1 });
+const lineMaterial = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.08 });
 
 for (let i = 0; i < nodeCount; i++) {
     for (let j = i + 1; j < nodeCount; j++) {
-        if (Math.random() < 0.03) {
+        if (Math.random() < 0.035) {
             const points = [nodes[i].position.clone(), nodes[j].position.clone()];
             const geometry = new THREE.BufferGeometry().setFromPoints(points);
             const line = new THREE.Line(geometry, lineMaterial.clone());
+            line.userData = { pulseOffset: Math.random() * Math.PI * 2 };
             scene.add(line);
             connections.push({ line, i, j });
         }
     }
 }
 
-// Animate
+// Background animation
+let bgShift = 0;
+const styleEl = document.createElement('style');
+styleEl.innerHTML = `
+  body, html {
+    background: radial-gradient(circle at center, #0d001c, #000000);
+    animation: bgFlow 12s ease-in-out infinite alternate;
+  }
+  @keyframes bgFlow {
+    0% { background-position: 50% 50%; filter: hue-rotate(0deg); }
+    100% { background-position: 51% 49%; filter: hue-rotate(360deg); }
+  }
+`;
+document.head.appendChild(styleEl);
+
+// Animation loop
 const clock = new THREE.Clock();
 
 function animate() {
     requestAnimationFrame(animate);
-
     const t = clock.getElapsedTime();
 
-    // Core rotation
+    // Rotate central core
     core.rotation.x += 0.003;
     core.rotation.y += 0.005;
 
-    // Nodes: pulse and float
+    // Update each node
     nodes.forEach((group, index) => {
-        const { floatSpeed, pulseSpeed, tOffset } = group.userData;
-
-        // Float like data drifting
-        group.position.x += floatSpeed * Math.sin(t + tOffset);
-        group.position.y += floatSpeed * Math.cos(t + tOffset);
+        const { floatSpeed, pulseSpeed, baseHue, tOffset } = group.userData;
 
         // Pulse scale
         const pulse = 1 + 0.15 * Math.sin(t * pulseSpeed + tOffset);
         group.scale.set(pulse, pulse, pulse);
 
-        // Trail ghost
-        if (Math.random() < 0.01) {
+        // Float in space
+        group.position.x += floatSpeed * Math.sin(t + tOffset);
+        group.position.y += floatSpeed * Math.cos(t + tOffset);
+
+        // Animate glow color (psychedelic hue shift)
+        const hue = (baseHue + t * 60 + index * 5) % 360;
+        group.children[1].material.color.setHSL(hue / 360, 1, 0.6);
+
+        // Ghost trails
+        if (Math.random() < 0.015) {
             const ghost = group.clone();
-            ghost.material = undefined;
             ghost.traverse(child => {
                 if (child.material) {
                     child.material = child.material.clone();
-                    child.material.opacity = 0.2;
+                    child.material.opacity = 0.15;
                     child.material.transparent = true;
                 }
             });
@@ -126,9 +145,9 @@ function animate() {
     // Fade ghost trails
     for (let i = ghostClones.length - 1; i >= 0; i--) {
         const ghost = ghostClones[i];
-        ghost.userData.life -= 0.02;
+        ghost.userData.life -= 0.015;
         ghost.traverse(child => {
-            if (child.material) child.material.opacity *= 0.96;
+            if (child.material) child.material.opacity *= 0.95;
         });
         if (ghost.userData.life <= 0) {
             scene.remove(ghost);
@@ -136,11 +155,18 @@ function animate() {
         }
     }
 
-    // Update line connections
+    // Update connection lines with subtle pulsation
     connections.forEach(conn => {
         const p1 = nodes[conn.i].position;
         const p2 = nodes[conn.j].position;
-        const positions = new Float32Array([p1.x, p1.y, p1.z, p2.x, p2.y, p2.z]);
+
+        const mid = new THREE.Vector3().addVectors(p1, p2).multiplyScalar(0.5);
+        const offset = Math.sin(t * 2 + conn.line.userData.pulseOffset) * 0.2;
+
+        const p1_mod = p1.clone().addScaledVector(mid.clone().sub(p1).normalize(), offset);
+        const p2_mod = p2.clone().addScaledVector(mid.clone().sub(p2).normalize(), offset);
+
+        const positions = new Float32Array([p1_mod.x, p1_mod.y, p1_mod.z, p2_mod.x, p2_mod.y, p2_mod.z]);
         conn.line.geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
         conn.line.geometry.attributes.position.needsUpdate = true;
     });
@@ -155,3 +181,4 @@ window.addEventListener('resize', () => {
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
 });
+
