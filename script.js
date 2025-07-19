@@ -184,8 +184,8 @@ const intersects = raycaster.intersectObjects(nodes.map(n => n.children[0]));
         const node = intersects[0].object.parent;
         const { type } = node.userData;
         tooltip.innerText = `Node Type: ${type}`;
-        tooltip.style.left = `${event.clientX + 10}px`;
-        tooltip.style.top = `${event.clientY - 10}px`;
+        tooltip.style.left = `${window.innerWidth / 2}px`;
+        tooltip.style.top = `${window.innerHeight / 2}px`;
         tooltip.style.display = 'block';
     } else {
         tooltip.style.display = 'none';
