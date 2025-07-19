@@ -116,9 +116,15 @@ function animate() {
         const pulse = 1 + 0.15 * Math.sin(t * pulseSpeed + tOffset);
         group.scale.set(pulse, pulse, pulse);
 
-        // Float in space
-        group.position.x += floatSpeed * Math.sin(t + tOffset);
-        group.position.y += floatSpeed * Math.cos(t + tOffset);
+      // Sacred geometry-inspired orbital motion
+const r = 15 + 5 * Math.sin(t + tOffset); // dynamic radius
+const a = t * floatSpeed + tOffset;
+const b = t * floatSpeed * 1.5 + tOffset;
+
+group.position.x = r * Math.sin(a) * Math.cos(b);
+group.position.y = r * Math.sin(a) * Math.sin(b);
+group.position.z = r * Math.cos(a);
+
 
         // Animate glow color (psychedelic hue shift)
         const hue = (baseHue + t * 60 + index * 5) % 360;
