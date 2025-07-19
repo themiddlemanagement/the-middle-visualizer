@@ -172,8 +172,14 @@ function animate() {
     });
 
     // 🏷️ Tooltip Label on Hover
-    raycaster.setFromCamera(pointer, camera);
-    const intersects = raycaster.intersectObjects(nodes.map(n => n.children[0]));
+    if (pointer.x === 0 && pointer.y === 0) {
+    pointer.x = 0.001; // Tiny nudge to trigger raycasting at least once
+    pointer.y = 0.001;
+}
+
+raycaster.setFromCamera(pointer, camera);
+const intersects = raycaster.intersectObjects(nodes.map(n => n.children[0]));
+
     if (intersects.length > 0) {
         const node = intersects[0].object.parent;
         const { type } = node.userData;
