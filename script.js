@@ -104,9 +104,10 @@ function animate() {
     requestAnimationFrame(animate);
     const t = clock.getElapsedTime();
 
-    // Rotate central core
-    core.rotation.x += 0.003;
-    core.rotation.y += 0.005;
+ // Sacred torus rotation with psychedelic rhythm
+core.rotation.x = 0.2 * Math.sin(t * 0.7);
+core.rotation.y = 0.3 * Math.cos(t * 0.5);
+core.rotation.z = 0.15 * Math.sin(t * 1.2 + Math.PI / 4);
 
     // Update each node
     nodes.forEach((group, index) => {
