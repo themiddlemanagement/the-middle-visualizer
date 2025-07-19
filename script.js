@@ -10,8 +10,8 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setClearColor(0x000000, 1);
 
 // Add glowing core
-const coreGeometry = new THREE.TorusKnotGeometry(6, 1.2, 200, 32);
-const coreMaterial = new THREE.MeshBasicMaterial({ color: 0x33ffee, wireframe: true });
+const coreGeometry = new THREE.TorusKnotGeometry(3, 1, 128, 16);
+const coreMaterial = new THREE.MeshBasicMaterial({ color: 0x00ffcc, wireframe: true });
 const core = new THREE.Mesh(coreGeometry, coreMaterial);
 scene.add(core);
 
