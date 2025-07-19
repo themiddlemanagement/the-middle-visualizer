@@ -15,23 +15,42 @@ const coreMaterial = new THREE.MeshBasicMaterial({ color: 0x00ffcc, wireframe: t
 const core = new THREE.Mesh(coreGeometry, coreMaterial);
 scene.add(core);
 
-// Nodes
+// Nodes (Akira-inspired style)
 const nodes = [];
 const nodeCount = 20;
-const nodeGeometry = new THREE.SphereGeometry(0.5, 8, 8);
+const nodeGeometry = new THREE.IcosahedronGeometry(0.7, 0); // angular and minimal
 
 for (let i = 0; i < nodeCount; i++) {
-    const color = new THREE.Color(`hsl(${Math.random() * 360}, 100%, 70%)`);
-    const material = new THREE.MeshBasicMaterial({ color });
-    const node = new THREE.Mesh(nodeGeometry, material);
-    node.position.set(
+    // Dark inner core
+    const coreMaterial = new THREE.MeshBasicMaterial({ color: 0x111111 });
+    const core = new THREE.Mesh(nodeGeometry, coreMaterial);
+
+    // Neon glow shell
+    const glowMaterial = new THREE.MeshBasicMaterial({
+        color: new THREE.Color(`hsl(${Math.floor(Math.random() * 360)}, 100%, 60%)`),
+        wireframe: true,
+        transparent: true,
+        opacity: 0.8
+    });
+
+    const glow = new THREE.Mesh(nodeGeometry.clone(), glowMaterial);
+    glow.scale.set(1.4, 1.4, 1.4);
+
+    // Combine into a group
+    const group = new THREE.Group();
+    group.add(core);
+    group.add(glow);
+
+    group.position.set(
         (Math.random() - 0.5) * 70,
         (Math.random() - 0.5) * 70,
         (Math.random() - 0.5) * 70
     );
-    scene.add(node);
-    nodes.push(node);
+
+    scene.add(group);
+    nodes.push(group);
 }
+
 
 // Fewer connections
 const connections = [];
