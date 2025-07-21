@@ -1,8 +1,8 @@
 // FULL UPGRADE WITH TOOLTIP, INTERACTIVITY, AND REALISTIC MYCELIUM BACKGROUND
 
 // 🧱 Core Imports and Setup
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
-import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js';
+import * as THREE from 'https://esm.sh/three@0.160.0';
+import { OrbitControls } from 'https://esm.sh/three@0.160.0/examples/jsm/controls/OrbitControls.js';
 
 // 🌌 Scene Initialization
 const scene = new THREE.Scene();
