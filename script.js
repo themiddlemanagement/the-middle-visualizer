@@ -232,6 +232,11 @@ function animate() {
 
 animate();
 
+// 🔁 Force one render to display scene immediately
+controls.update();
+renderer.render(scene, camera);
+
+
 // 🧠 Force initial pointer movement to trigger render
 document.dispatchEvent(new PointerEvent('pointermove', {
     clientX: window.innerWidth / 2,
