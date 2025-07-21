@@ -232,6 +232,15 @@ function animate() {
 
 animate();
 
+window.addEventListener('load', () => {
+    const fakeMove = new PointerEvent('pointermove', {
+        clientX: window.innerWidth / 2,
+        clientY: window.innerHeight / 2
+    });
+    document.dispatchEvent(fakeMove);
+});
+
+
 // 🔁 Force one render to display scene immediately
 controls.update();
 renderer.render(scene, camera);
