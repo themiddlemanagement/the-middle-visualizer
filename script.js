@@ -1,8 +1,8 @@
-// FULL UPGRADE WITH TOOLTIP, INTERACTIVITY, AND MYCELIUM BACKGROUND
+// FULL UPGRADE WITH TOOLTIP, INTERACTIVITY, AND REALISTIC MYCELIUM BACKGROUND
 
 // 🧱 Core Imports and Setup
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
-import { OrbitControls } from 'https://unpkg.com/three@0.160.0/examples/jsm/controls/OrbitControls.js?module';
+import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js';
 
 // 🌌 Scene Initialization
 const scene = new THREE.Scene();
@@ -16,6 +16,7 @@ camera.position.z = 60;
 const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('visualizer'), antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setClearColor(0x000000, 1);
+document.body.appendChild(renderer.domElement);
 
 // 🕹️ Orbit Controls
 const controls = new OrbitControls(camera, renderer.domElement);
@@ -23,7 +24,7 @@ controls.enableDamping = true;
 controls.dampingFactor = 0.1;
 controls.zoomSpeed = 0.6;
 controls.autoRotate = true;
-controls.autoRotateSpeed = 0.5;
+controls.autoRotateSpeed = 0.3; // slowed down rotation
 
 // 🏷️ Tooltip Label
 const tooltip = document.createElement('div');
@@ -38,44 +39,42 @@ tooltip.style.display = 'none';
 tooltip.style.zIndex = '10';
 document.body.appendChild(tooltip);
 
-// 🧠 Mycelium-Like Background Nodes
+// 🧠 Realistic Mycelium-Like Background Nodes
 const myceliumGroup = new THREE.Group();
 scene.add(myceliumGroup);
 const myceliumLines = [];
-const branchCount = 200;
+const myceliumPoints = [];
 
-for (let i = 0; i < branchCount; i++) {
+for (let i = 0; i < 150; i++) {
     const x = (Math.random() - 0.5) * 100;
     const y = (Math.random() - 0.5) * 100;
     const z = (Math.random() - 0.5) * 100;
+    myceliumPoints.push(new THREE.Vector3(x, y, z));
+}
 
-    for (let j = 0; j < 3; j++) {
-        const x2 = x + (Math.random() - 0.5) * 20;
-        const y2 = y + (Math.random() - 0.5) * 20;
-        const z2 = z + (Math.random() - 0.5) * 20;
-
-        const geometry = new THREE.BufferGeometry().setFromPoints([
-            new THREE.Vector3(x, y, z),
-            new THREE.Vector3(x2, y2, z2)
-        ]);
-
-        const material = new THREE.LineBasicMaterial({
-            color: new THREE.Color(`hsl(${Math.random() * 360}, 100%, 50%)`),
-            transparent: true,
-            opacity: 0.3
-        });
-
-        const line = new THREE.Line(geometry, material);
-        line.userData.pulseSpeed = Math.random() * 2 + 1;
-        line.userData.pulseOffset = Math.random() * Math.PI * 2;
-        myceliumGroup.add(line);
-        myceliumLines.push(line);
+for (let i = 0; i < myceliumPoints.length; i++) {
+    const p1 = myceliumPoints[i];
+    for (let j = i + 1; j < myceliumPoints.length; j++) {
+        const p2 = myceliumPoints[j];
+        if (p1.distanceTo(p2) < 15) {
+            const geometry = new THREE.BufferGeometry().setFromPoints([p1, p2]);
+            const material = new THREE.LineBasicMaterial({
+                color: new THREE.Color(`hsl(${Math.random() * 360}, 100%, 50%)`),
+                transparent: true,
+                opacity: 0.3
+            });
+            const line = new THREE.Line(geometry, material);
+            line.userData.pulseSpeed = Math.random() * 2 + 1;
+            line.userData.pulseOffset = Math.random() * Math.PI * 2;
+            myceliumGroup.add(line);
+            myceliumLines.push(line);
+        }
     }
 }
 
 // 🌀 Central Torus Core
 const coreGeometry = new THREE.TorusKnotGeometry(3, 1, 80, 8);
-const coreMaterial = new THREE.MeshBasicMaterial({ color: new THREE.Color('hsl(180, 100%, 50%)'), wireframe: true });
+const coreMaterial = new THREE.MeshBasicMaterial({ color: 0x00ffcc, wireframe: true });
 const core = new THREE.Mesh(coreGeometry, coreMaterial);
 scene.add(core);
 
@@ -156,17 +155,17 @@ function animate() {
     const t = clock.getElapsedTime();
     controls.update();
 
-    // 🌈 Mycelium Glow Pulses
+    // 🌈 Mycelium Glow Pulses (reverse motion)
     myceliumLines.forEach(line => {
-        const h = (t * 10 + line.userData.pulseOffset * 60) % 360;
-        const opacity = 0.2 + 0.1 * Math.sin(t * line.userData.pulseSpeed + line.userData.pulseOffset);
+        const h = (360 - ((t * 10 + line.userData.pulseOffset * 60) % 360));
+        const opacity = 0.2 + 0.1 * Math.sin(-t * line.userData.pulseSpeed + line.userData.pulseOffset);
         line.material.color.setHSL(h / 360, 1, 0.5);
         line.material.opacity = opacity;
     });
 
-    // 🎡 Core Torus Motion + Color Fade
-    const torusHue = (t * 20) % 360;
-    coreMaterial.color.setHSL(torusHue / 360, 1, 0.5);
+    // 🎡 Core Torus Motion + Color Hue Shift
+    const hue = (t * 15) % 360;
+    coreMaterial.color.setHSL(hue / 360, 1, 0.6);
     core.rotation.x = 0.2 * Math.sin(t * 0.7);
     core.rotation.y = 0.3 * Math.cos(t * 0.5);
     core.rotation.z = 0.15 * Math.sin(t * 1.2 + Math.PI / 4);
@@ -174,7 +173,6 @@ function animate() {
     // 🔁 Node Orbits + Visuals
     nodes.forEach((group, index) => {
         const { floatSpeed, pulseSpeed, baseHue, behavior, tOffset } = group.userData;
-
         const baseRadius = 20;
         const modRadius = baseRadius + 5 * Math.sin(t * 0.5 + tOffset);
         const a = t * floatSpeed + tOffset;
@@ -222,8 +220,8 @@ function animate() {
         const node = intersects[0].object.parent;
         const { type } = node.userData;
         tooltip.innerText = `Node Type: ${type}`;
-        tooltip.style.left = `${pointer.x * window.innerWidth * 0.5 + window.innerWidth * 0.5 + 10}px`;
-        tooltip.style.top = `${-pointer.y * window.innerHeight * 0.5 + window.innerHeight * 0.5 - 10}px`;
+        tooltip.style.left = `${event.clientX + 10}px`;
+        tooltip.style.top = `${event.clientY - 10}px`;
         tooltip.style.display = 'block';
     } else {
         tooltip.style.display = 'none';
