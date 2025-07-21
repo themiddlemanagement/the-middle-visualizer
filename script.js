@@ -232,6 +232,13 @@ function animate() {
 
 animate();
 
+// 🧠 Force initial pointer movement to trigger render
+document.dispatchEvent(new PointerEvent('pointermove', {
+    clientX: window.innerWidth / 2,
+    clientY: window.innerHeight / 2
+}));
+
+
 // 🔁 Responsive Canvas Resize
 window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
