@@ -1,9 +1,8 @@
-// FULL UPGRADE WITH TOOLTIP AND INTERACTIVITY
+// FULL UPGRADE WITH TOOLTIP, INTERACTIVITY, AND MYCELIUM BACKGROUND
 
 // 🧱 Core Imports and Setup
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
-import { OrbitControls } from 'https://unpkg.com/three@0.160.0/examples/jsm/controls/OrbitControls.js?module';
-
+import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/controls/OrbitControls.js';
 
 // 🌌 Scene Initialization
 const scene = new THREE.Scene();
@@ -37,6 +36,45 @@ tooltip.style.pointerEvents = 'none';
 tooltip.style.display = 'none';
 tooltip.style.zIndex = '10';
 document.body.appendChild(tooltip);
+
+// 🧠 Mycelium-Like Background Nodes
+const myceliumGroup = new THREE.Group();
+scene.add(myceliumGroup);
+const myceliumLines = [];
+const radialSegments = 100;
+const branchesPerSegment = 3;
+const radius = 50;
+
+for (let i = 0; i < radialSegments; i++) {
+    const angle = (i / radialSegments) * Math.PI * 2;
+    const baseX = Math.cos(angle) * 10;
+    const baseY = Math.sin(angle) * 10;
+    const baseZ = (Math.random() - 0.5) * 4;
+
+    for (let j = 1; j <= branchesPerSegment; j++) {
+        const branchLength = Math.random() * 35 + 15;
+        const x = baseX + Math.cos(angle) * branchLength;
+        const y = baseY + Math.sin(angle) * branchLength;
+        const z = baseZ + (Math.random() - 0.5) * 5;
+
+        const geometry = new THREE.BufferGeometry().setFromPoints([
+            new THREE.Vector3(baseX, baseY, baseZ),
+            new THREE.Vector3(x, y, z)
+        ]);
+
+        const material = new THREE.LineBasicMaterial({
+            color: new THREE.Color(`hsl(${Math.random() * 360}, 100%, 50%)`),
+            transparent: true,
+            opacity: 0.3
+        });
+
+        const line = new THREE.Line(geometry, material);
+        line.userData.pulseSpeed = Math.random() * 2 + 1;
+        line.userData.pulseOffset = Math.random() * Math.PI * 2;
+        myceliumGroup.add(line);
+        myceliumLines.push(line);
+    }
+}
 
 // 🌀 Central Torus Core
 const coreGeometry = new THREE.TorusKnotGeometry(3, 1, 80, 8);
@@ -121,6 +159,14 @@ function animate() {
     const t = clock.getElapsedTime();
     controls.update();
 
+    // 🌈 Mycelium Glow Pulses
+    myceliumLines.forEach(line => {
+        const h = (t * 10 + line.userData.pulseOffset * 60) % 360;
+        const opacity = 0.2 + 0.1 * Math.sin(t * line.userData.pulseSpeed + line.userData.pulseOffset);
+        line.material.color.setHSL(h / 360, 1, 0.5);
+        line.material.opacity = opacity;
+    });
+
     // 🎡 Core Torus Motion
     core.rotation.x = 0.2 * Math.sin(t * 0.7);
     core.rotation.y = 0.3 * Math.cos(t * 0.5);
@@ -145,7 +191,6 @@ function animate() {
         const hue = (baseHue + t * 60 + index * 5) % 360;
         group.children[1].material.color.setHSL(hue / 360, 1, 0.6);
 
-        // 🧠 Node Type Behavior
         if (behavior === "spin") {
             group.rotation.y += 0.01;
         } else if (behavior === "shimmer") {
@@ -172,20 +217,14 @@ function animate() {
     });
 
     // 🏷️ Tooltip Label on Hover
-    if (pointer.x === 0 && pointer.y === 0) {
-    pointer.x = 0.001; // Tiny nudge to trigger raycasting at least once
-    pointer.y = 0.001;
-}
-
-raycaster.setFromCamera(pointer, camera);
-const intersects = raycaster.intersectObjects(nodes.map(n => n.children[0]));
-
+    raycaster.setFromCamera(pointer, camera);
+    const intersects = raycaster.intersectObjects(nodes.map(n => n.children[0]));
     if (intersects.length > 0) {
         const node = intersects[0].object.parent;
         const { type } = node.userData;
         tooltip.innerText = `Node Type: ${type}`;
-        tooltip.style.left = `${window.innerWidth / 2}px`;
-        tooltip.style.top = `${window.innerHeight / 2}px`;
+        tooltip.style.left = `${event.clientX + 10}px`;
+        tooltip.style.top = `${event.clientY - 10}px`;
         tooltip.style.display = 'block';
     } else {
         tooltip.style.display = 'none';
