@@ -16,13 +16,14 @@ camera.position.z = 60;
 const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('visualizer'), antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setClearColor(0x000000, 1);
-document.body.appendChild(renderer.domElement);
 
 // 🕹️ Orbit Controls
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.1;
 controls.zoomSpeed = 0.6;
+controls.autoRotate = true;
+controls.autoRotateSpeed = 0.5;
 
 // 🏷️ Tooltip Label
 const tooltip = document.createElement('div');
@@ -41,25 +42,21 @@ document.body.appendChild(tooltip);
 const myceliumGroup = new THREE.Group();
 scene.add(myceliumGroup);
 const myceliumLines = [];
-const radialSegments = 100;
-const branchesPerSegment = 3;
-const radius = 50;
+const branchCount = 200;
 
-for (let i = 0; i < radialSegments; i++) {
-    const angle = (i / radialSegments) * Math.PI * 2;
-    const baseX = Math.cos(angle) * 10;
-    const baseY = Math.sin(angle) * 10;
-    const baseZ = (Math.random() - 0.5) * 4;
+for (let i = 0; i < branchCount; i++) {
+    const x = (Math.random() - 0.5) * 100;
+    const y = (Math.random() - 0.5) * 100;
+    const z = (Math.random() - 0.5) * 100;
 
-    for (let j = 1; j <= branchesPerSegment; j++) {
-        const branchLength = Math.random() * 35 + 15;
-        const x = baseX + Math.cos(angle) * branchLength;
-        const y = baseY + Math.sin(angle) * branchLength;
-        const z = baseZ + (Math.random() - 0.5) * 5;
+    for (let j = 0; j < 3; j++) {
+        const x2 = x + (Math.random() - 0.5) * 20;
+        const y2 = y + (Math.random() - 0.5) * 20;
+        const z2 = z + (Math.random() - 0.5) * 20;
 
         const geometry = new THREE.BufferGeometry().setFromPoints([
-            new THREE.Vector3(baseX, baseY, baseZ),
-            new THREE.Vector3(x, y, z)
+            new THREE.Vector3(x, y, z),
+            new THREE.Vector3(x2, y2, z2)
         ]);
 
         const material = new THREE.LineBasicMaterial({
@@ -78,7 +75,7 @@ for (let i = 0; i < radialSegments; i++) {
 
 // 🌀 Central Torus Core
 const coreGeometry = new THREE.TorusKnotGeometry(3, 1, 80, 8);
-const coreMaterial = new THREE.MeshBasicMaterial({ color: 0x00ffcc, wireframe: true });
+const coreMaterial = new THREE.MeshBasicMaterial({ color: new THREE.Color('hsl(180, 100%, 50%)'), wireframe: true });
 const core = new THREE.Mesh(coreGeometry, coreMaterial);
 scene.add(core);
 
@@ -167,7 +164,9 @@ function animate() {
         line.material.opacity = opacity;
     });
 
-    // 🎡 Core Torus Motion
+    // 🎡 Core Torus Motion + Color Fade
+    const torusHue = (t * 20) % 360;
+    coreMaterial.color.setHSL(torusHue / 360, 1, 0.5);
     core.rotation.x = 0.2 * Math.sin(t * 0.7);
     core.rotation.y = 0.3 * Math.cos(t * 0.5);
     core.rotation.z = 0.15 * Math.sin(t * 1.2 + Math.PI / 4);
@@ -223,8 +222,8 @@ function animate() {
         const node = intersects[0].object.parent;
         const { type } = node.userData;
         tooltip.innerText = `Node Type: ${type}`;
-        tooltip.style.left = `${event.clientX + 10}px`;
-        tooltip.style.top = `${event.clientY - 10}px`;
+        tooltip.style.left = `${pointer.x * window.innerWidth * 0.5 + window.innerWidth * 0.5 + 10}px`;
+        tooltip.style.top = `${-pointer.y * window.innerHeight * 0.5 + window.innerHeight * 0.5 - 10}px`;
         tooltip.style.display = 'block';
     } else {
         tooltip.style.display = 'none';
